@@ -1,6 +1,7 @@
 package com.example.training.task;
 
 import com.example.training.common.NotFoundException;
+import com.example.training.task.dto.TaskCreateRequest;
 import com.example.training.task.dto.TaskRequest;
 import com.example.training.task.dto.TaskResponse;
 import java.util.List;
@@ -26,13 +27,19 @@ public class TaskService {
                 .toList();
     }
 
+    public List<TaskResponse> findAllByPriority() {
+        return taskRepository.findAllByPriorityAsc().stream()
+                .map(TaskResponse::from)
+                .toList();
+    }
+
     public TaskResponse findById(Long id) {
         return TaskResponse.from(getTask(id));
     }
 
     @Transactional
-    public TaskResponse create(TaskRequest request) {
-        Task task = new Task(request.title(), request.description());
+    public TaskResponse create(TaskCreateRequest request) {
+        Task task = new Task(request.title(), request.description(), request.priority());
         return TaskResponse.from(taskRepository.save(task));
     }
 
