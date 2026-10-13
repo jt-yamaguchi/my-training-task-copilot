@@ -2,6 +2,7 @@ package com.example.training.task.dto;
 
 import com.example.training.task.Task;
 import com.example.training.task.TaskPriority;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 /**
@@ -13,6 +14,7 @@ public record TaskResponse(
         String description,
         TaskPriority priority,
         boolean done,
+        LocalDate dueDate,
         OffsetDateTime createdAt) {
 
     public static TaskResponse from(Task task) {
@@ -22,6 +24,7 @@ public record TaskResponse(
                 task.getDescription(),
                 task.getPriority(),
                 task.isDone(),
+                task.getDueDate(),
                 task.getCreatedAt());
     }
 }

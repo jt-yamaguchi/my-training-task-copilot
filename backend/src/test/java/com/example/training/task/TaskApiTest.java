@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,7 +61,50 @@ class TaskApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"title\": \"既定優先度\"}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.priority").value("MEDIUM"));
+                .andExpect(jsonPath("$.priority").value("MEDIUM"))
+                .andExpect(jsonPath("$.dueDate").value((Object) null));
+    }
+
+    @Test
+    void 期限付きで作成して取得すると同じ日付が返る() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\": \"期限付きタスク\", \"dueDate\": \"2026-10-15\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.dueDate").value("2026-10-15"))
+                .andReturn();
+
+        Number idValue = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+        mockMvc.perform(get("/api/tasks/{id}", idValue.longValue()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dueDate").value("2026-10-15"));
+    }
+
+    @Test
+    void 期限にnullを指定して作成できる() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\": \"期限なしタスク\", \"dueDate\": null}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        assertNull(JsonPath.read(result.getResponse().getContentAsString(), "$.dueDate"));
+    }
+
+    @Test
+    void 更新しても作成時の期限を維持する() throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\": \"期限を維持するタスク\", \"dueDate\": \"2026-10-15\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Number idValue = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+        mockMvc.perform(put("/api/tasks/{id}", idValue.longValue())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\": \"更新後\", \"description\": null, \"done\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dueDate").value("2026-10-15"));
     }
 
     @Test

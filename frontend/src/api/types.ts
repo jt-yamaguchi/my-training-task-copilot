@@ -10,6 +10,7 @@ export type Task = {
   description: string | null;
   priority: TaskPriority;
   done: boolean;
+  dueDate: string | null;
   createdAt: string;
 };
 
@@ -17,6 +18,7 @@ export type TaskCreateRequest = {
   title: string;
   description: string | null;
   priority: TaskPriority;
+  dueDate: string | null;
 };
 
 export type TaskRequest = {

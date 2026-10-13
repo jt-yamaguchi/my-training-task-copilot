@@ -2,13 +2,19 @@ import { useState } from 'react';
 import type { TaskPriority } from '../api/types';
 
 type Props = {
-  onSubmit: (title: string, description: string, priority: TaskPriority) => Promise<void>;
+  onSubmit: (
+    title: string,
+    description: string,
+    priority: TaskPriority,
+    dueDate: string | null,
+  ) => Promise<void>;
 };
 
 export default function TaskForm({ onSubmit }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
+  const [dueDate, setDueDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,10 +24,11 @@ export default function TaskForm({ onSubmit }: Props) {
     }
     setSubmitting(true);
     try {
-      await onSubmit(title.trim(), description.trim(), priority);
+      await onSubmit(title.trim(), description.trim(), priority, dueDate || null);
       setTitle('');
       setDescription('');
       setPriority('MEDIUM');
+      setDueDate('');
     } finally {
       setSubmitting(false);
     }
@@ -45,6 +52,15 @@ export default function TaskForm({ onSubmit }: Props) {
         maxLength={500}
         aria-label="説明"
       />
+      <label className="task-form-due-date">
+        期限（任意）
+        <input
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+          aria-label="期限（任意）"
+        />
+      </label>
       <select
         value={priority}
         onChange={(e) => setPriority(e.target.value as TaskPriority)}

@@ -39,7 +39,7 @@ public class TaskService {
 
     @Transactional
     public TaskResponse create(TaskCreateRequest request) {
-        Task task = new Task(request.title(), request.description(), request.priority());
+        Task task = new Task(request.title(), request.description(), request.priority(), request.dueDate());
         return TaskResponse.from(taskRepository.save(task));
     }
 

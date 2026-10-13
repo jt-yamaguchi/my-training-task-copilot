@@ -3,6 +3,7 @@ package com.example.training.task.dto;
 import com.example.training.task.TaskPriority;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
 
 /**
  * タスク作成リクエスト。
@@ -12,5 +13,7 @@ public record TaskCreateRequest(
 
         @Size(max = 500, message = "説明は500文字以内で入力してください") String description,
 
-        TaskPriority priority) {
+        TaskPriority priority,
+
+        LocalDate dueDate) {
 }
