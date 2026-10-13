@@ -1,5 +1,7 @@
 package com.example.training.task;
 
+import com.example.training.category.CategoryRepository;
+import com.example.training.common.BadRequestException;
 import com.example.training.common.NotFoundException;
 import com.example.training.task.dto.TaskCreateRequest;
 import com.example.training.task.dto.TaskRequest;
@@ -18,9 +20,27 @@ import org.springframework.transaction.annotation.Transactional;
 public class TaskService {
 
     private final TaskRepository taskRepository;
+    private final CategoryRepository categoryRepository;
 
-    public TaskService(TaskRepository taskRepository) {
+    public TaskService(TaskRepository taskRepository, CategoryRepository categoryRepository) {
         this.taskRepository = taskRepository;
+        this.categoryRepository = categoryRepository;
+    }
+
+    public List<TaskResponse> list(String sort, Long categoryId) {
+        if (sort != null && !"priority".equals(sort)) {
+            throw new BadRequestException("sortに指定できる値はpriorityです");
+        }
+        if (categoryId == null) {
+            return sort == null ? findAll() : findAllByPriority();
+        }
+        if (categoryId <= 0 || !categoryRepository.existsById(categoryId)) {
+            throw new BadRequestException("カテゴリが見つかりません: id=" + categoryId);
+        }
+        List<Task> tasks = sort == null
+                ? taskRepository.findByCategoryIdOrderByIdAsc(categoryId)
+                : taskRepository.findByCategoryIdByPriorityAsc(categoryId);
+        return tasks.stream().map(TaskResponse::from).toList();
     }
 
     public List<TaskResponse> findAll() {
@@ -41,7 +61,12 @@ public class TaskService {
 
     @Transactional
     public TaskResponse create(TaskCreateRequest request) {
-        Task task = new Task(request.title(), request.description(), request.priority(), request.dueDate());
+        if (request.categoryId() != null) {
+            categoryRepository.findByIdForTask(request.categoryId())
+                    .orElseThrow(() -> new BadRequestException("カテゴリが見つかりません: id=" + request.categoryId()));
+        }
+        Task task = new Task(request.title(), request.description(), request.priority(), request.dueDate(),
+                request.categoryId());
         return TaskResponse.from(taskRepository.save(task));
     }
 

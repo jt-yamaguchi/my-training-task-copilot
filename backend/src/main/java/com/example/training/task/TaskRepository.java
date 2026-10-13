@@ -3,6 +3,7 @@ package com.example.training.task;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
@@ -11,4 +12,10 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @Query(value = "SELECT * FROM tasks ORDER BY CASE priority "
             + "WHEN 'HIGH' THEN 0 WHEN 'MEDIUM' THEN 1 WHEN 'LOW' THEN 2 END, id ASC", nativeQuery = true)
     List<Task> findAllByPriorityAsc();
+
+    List<Task> findByCategoryIdOrderByIdAsc(Long categoryId);
+
+    @Query(value = "SELECT * FROM tasks WHERE category_id = :categoryId ORDER BY CASE priority "
+            + "WHEN 'HIGH' THEN 0 WHEN 'MEDIUM' THEN 1 WHEN 'LOW' THEN 2 END, id ASC", nativeQuery = true)
+    List<Task> findByCategoryIdByPriorityAsc(@Param("categoryId") Long categoryId);
 }

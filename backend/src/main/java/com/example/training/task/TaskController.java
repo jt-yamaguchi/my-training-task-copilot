@@ -1,6 +1,5 @@
 package com.example.training.task;
 
-import com.example.training.common.BadRequestException;
 import com.example.training.task.dto.TaskCreateRequest;
 import com.example.training.task.dto.TaskRequest;
 import com.example.training.task.dto.TaskResponse;
@@ -32,14 +31,9 @@ public class TaskController {
     }
 
     @GetMapping
-    public List<TaskResponse> list(@RequestParam(required = false) String sort) {
-        if (sort == null) {
-            return taskService.findAll();
-        }
-        if ("priority".equals(sort)) {
-            return taskService.findAllByPriority();
-        }
-        throw new BadRequestException("sortに指定できる値はpriorityです");
+    public List<TaskResponse> list(@RequestParam(required = false) String sort,
+            @RequestParam(required = false) Long categoryId) {
+        return taskService.list(sort, categoryId);
     }
 
     @GetMapping("/{id}")
