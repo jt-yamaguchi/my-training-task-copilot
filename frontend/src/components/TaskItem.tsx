@@ -13,8 +13,12 @@ type Props = {
 };
 
 export default function TaskItem({ task, onToggle, onDelete }: Props) {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const overdue = !task.done && task.dueDate !== null && task.dueDate < today;
+
   return (
-    <li className={task.done ? 'task-item done' : 'task-item'}>
+    <li className={`task-item${task.done ? ' done' : ''}${overdue ? ' overdue' : ''}`}>
       <label className="task-check">
         <input type="checkbox" checked={task.done} onChange={() => void onToggle(task)} />
         <span className="task-title">{task.title}</span>
@@ -26,6 +30,12 @@ export default function TaskItem({ task, onToggle, onDelete }: Props) {
         </span>
       </label>
       {task.description && <p className="task-desc">{task.description}</p>}
+      {task.dueDate && (
+        <p className="task-due-date">
+          期限: {task.dueDate}
+          {overdue && <span className="overdue-badge">期限切れ</span>}
+        </p>
+      )}
       <button type="button" className="task-delete" onClick={() => void onDelete(task.id)}>
         削除
       </button>

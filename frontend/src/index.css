@@ -50,7 +50,7 @@ body {
 
 .task-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 100px auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 120px;
   gap: 8px;
   margin-bottom: 28px;
 }
@@ -58,11 +58,20 @@ body {
 .task-form input,
 .task-form select,
 .task-toolbar select {
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--card);
   font-size: 0.95rem;
+}
+
+.task-form-due-date {
+  grid-column: 1 / 3;
+  display: grid;
+  gap: 4px;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
 }
 
 .task-form input:focus,
@@ -111,6 +120,11 @@ body {
 .task-item.done .task-title {
   text-decoration: line-through;
   color: var(--ink-soft);
+}
+
+.task-item.overdue {
+  border-color: var(--danger);
+  background: #fff1ee;
 }
 
 .task-check {
@@ -175,6 +189,23 @@ body {
   font-size: 0.88rem;
 }
 
+.task-due-date {
+  margin: 6px 0 0 26px;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
+.overdue-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: #fbe7e3;
+  color: #9b342b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .task-delete {
   position: absolute;
   top: 12px;
@@ -209,6 +240,10 @@ body {
 @media (max-width: 560px) {
   .task-form {
     grid-template-columns: 1fr;
+  }
+
+  .task-form-due-date {
+    grid-column: auto;
   }
 
   .task-form button {

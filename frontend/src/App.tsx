@@ -25,8 +25,13 @@ export default function App() {
     void load();
   }, [load]);
 
-  const handleCreate = async (title: string, description: string, priority: TaskPriority) => {
-    await createTask({ title, description: description || null, priority });
+  const handleCreate = async (
+    title: string,
+    description: string,
+    priority: TaskPriority,
+    dueDate: string | null,
+  ) => {
+    await createTask({ title, description: description || null, priority, dueDate });
     await load();
   };
 
