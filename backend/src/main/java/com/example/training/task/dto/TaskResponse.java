@@ -16,7 +16,8 @@ public record TaskResponse(
         boolean done,
         LocalDate dueDate,
         OffsetDateTime createdAt,
-        OffsetDateTime completedAt) {
+        OffsetDateTime completedAt,
+        Long categoryId) {
 
     public static TaskResponse from(Task task) {
         return new TaskResponse(
@@ -27,6 +28,7 @@ public record TaskResponse(
                 task.isDone(),
                 task.getDueDate(),
                 task.getCreatedAt(),
-                task.getCompletedAt());
+                task.getCompletedAt(),
+                task.getCategoryId());
     }
 }

@@ -19,11 +19,12 @@ const completedAtFormatter = new Intl.DateTimeFormat('ja-JP', {
 
 type Props = {
   task: Task;
+  categoryName?: string;
   onToggle: (task: Task) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
 };
 
-export default function TaskItem({ task, onToggle, onDelete }: Props) {
+export default function TaskItem({ task, categoryName, onToggle, onDelete }: Props) {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const overdue = !task.done && task.dueDate !== null && task.dueDate < today;
@@ -41,6 +42,7 @@ export default function TaskItem({ task, onToggle, onDelete }: Props) {
         </span>
       </label>
       {task.description && <p className="task-desc">{task.description}</p>}
+      {categoryName && <p className="task-category">カテゴリ: {categoryName}</p>}
       {task.dueDate && (
         <p className="task-due-date">
           期限: {task.dueDate}

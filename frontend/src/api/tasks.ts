@@ -14,9 +14,19 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
 
-export async function fetchTasks(sort: TaskSort = 'created'): Promise<Task[]> {
-  const query = sort === 'priority' ? '?sort=priority' : '';
-  const res = await fetch(`/api/tasks${query}`);
+export async function fetchTasks(
+  sort: TaskSort = 'created',
+  categoryId: number | null = null,
+): Promise<Task[]> {
+  const params = new URLSearchParams();
+  if (sort === 'priority') {
+    params.set('sort', 'priority');
+  }
+  if (categoryId !== null) {
+    params.set('categoryId', String(categoryId));
+  }
+  const query = params.toString();
+  const res = await fetch(`/api/tasks${query ? `?${query}` : ''}`);
   return handleResponse<Task[]>(res);
 }
 

@@ -45,16 +45,24 @@ public class Task {
     @Column(name = "completed_at")
     private OffsetDateTime completedAt;
 
+    @Column(name = "category_id")
+    private Long categoryId;
+
     protected Task() {
         // JPAが使用するデフォルトコンストラクタ
     }
 
     public Task(String title, String description, TaskPriority priority, LocalDate dueDate) {
+        this(title, description, priority, dueDate, null);
+    }
+
+    public Task(String title, String description, TaskPriority priority, LocalDate dueDate, Long categoryId) {
         this.title = title;
         this.description = description;
         this.done = false;
         this.priority = priority == null ? TaskPriority.MEDIUM : priority;
         this.dueDate = dueDate;
+        this.categoryId = categoryId;
         this.createdAt = OffsetDateTime.now();
     }
 
@@ -88,6 +96,10 @@ public class Task {
 
     public OffsetDateTime getCompletedAt() {
         return completedAt;
+    }
+
+    public Long getCategoryId() {
+        return categoryId;
     }
 
     public void update(String title, String description, boolean done, OffsetDateTime completedAt) {

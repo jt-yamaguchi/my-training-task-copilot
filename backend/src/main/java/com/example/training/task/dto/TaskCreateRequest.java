@@ -2,6 +2,7 @@ package com.example.training.task.dto;
 
 import com.example.training.task.TaskPriority;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
@@ -15,5 +16,7 @@ public record TaskCreateRequest(
 
         TaskPriority priority,
 
-        LocalDate dueDate) {
+        LocalDate dueDate,
+
+        @Positive(message = "カテゴリIDは正の整数で指定してください") Long categoryId) {
 }

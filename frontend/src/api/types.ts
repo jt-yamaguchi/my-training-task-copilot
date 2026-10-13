@@ -13,6 +13,7 @@ export type Task = {
   dueDate: string | null;
   createdAt: string;
   completedAt: string | null;
+  categoryId: number | null;
 };
 
 export type TaskCreateRequest = {
@@ -20,10 +21,20 @@ export type TaskCreateRequest = {
   description: string | null;
   priority: TaskPriority;
   dueDate: string | null;
+  categoryId?: number | null;
 };
 
 export type TaskRequest = {
   title: string;
   description: string | null;
   done: boolean;
+};
+
+export type Category = {
+  id: number;
+  name: string;
+};
+
+export type CategoryCreateRequest = {
+  name: string;
 };

@@ -41,6 +41,141 @@ class TaskApiTest {
     private EntityManager entityManager;
 
     @Test
+    void カテゴリ付きで作成して取得でき更新後も保持する() throws Exception {
+        long categoryId = createCategory("業務");
+        long taskId = createCategorizedTask("カテゴリ付き", categoryId, "HIGH");
+        entityManager.flush();
+        entityManager.clear();
+        mockMvc.perform(get("/api/tasks/{id}", taskId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryId").value(categoryId));
+        mockMvc.perform(put("/api/tasks/{id}", taskId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"更新後\",\"done\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryId").value(categoryId));
+    }
+
+    @Test
+    void カテゴリ省略とnullは未設定になる() throws Exception {
+        for (String body : new String[] { "{\"title\":\"未設定\"}",
+                "{\"title\":\"未設定\",\"categoryId\":null}" }) {
+            mockMvc.perform(post("/api/tasks").contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.categoryId").hasJsonPath())
+                    .andExpect(jsonPath("$.categoryId").value((Object) null));
+        }
+        mockMvc.perform(get("/api/tasks"))
+                .andExpect(jsonPath("$[0].categoryId").hasJsonPath())
+                .andExpect(jsonPath("$[0].categoryId").value((Object) null));
+    }
+
+    @Test
+    void 存在しないカテゴリと不正なIDは400になる() throws Exception {
+        for (String categoryId : new String[] { "999999", "0", "-1", "\"invalid\"" }) {
+            mockMvc.perform(post("/api/tasks")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"title\":\"不正カテゴリ\",\"categoryId\":" + categoryId + "}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").exists());
+        }
+        for (String categoryId : new String[] { "999999", "0", "-1", "invalid" }) {
+            mockMvc.perform(get("/api/tasks").param("categoryId", categoryId))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").exists());
+        }
+    }
+
+    @Test
+    void カテゴリで絞り込み優先度順と併用できる() throws Exception {
+        long categoryId = createCategory("絞り込み");
+        long otherId = createCategory("別カテゴリ");
+        long lowId = createCategorizedTask("低", categoryId, "LOW");
+        long highId = createCategorizedTask("高", categoryId, "HIGH");
+        long secondHighId = createCategorizedTask("高その2", categoryId, "HIGH");
+        createCategorizedTask("対象外", otherId, "HIGH");
+        mockMvc.perform(get("/api/tasks").param("categoryId", Long.toString(categoryId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].id").value(lowId))
+                .andExpect(jsonPath("$[1].id").value(highId));
+        mockMvc.perform(get("/api/tasks").param("categoryId", Long.toString(categoryId)).param("sort", "priority"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].id").value(highId))
+                .andExpect(jsonPath("$[1].id").value(secondHighId))
+                .andExpect(jsonPath("$[2].id").value(lowId));
+        mockMvc.perform(get("/api/tasks"))
+                .andExpect(jsonPath("$.length()").value(7))
+                .andExpect(jsonPath("$[0].categoryId").value((Object) null));
+        long emptyId = createCategory("空カテゴリ");
+        mockMvc.perform(get("/api/tasks").param("categoryId", Long.toString(emptyId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void 使用中カテゴリの削除はタスクを残してカテゴリだけ未設定にする() throws Exception {
+        long categoryId = createCategory("削除対象");
+        long otherId = createCategory("残すカテゴリ");
+        long taskId = createCategorizedTask("保持するタスク", categoryId, "HIGH");
+        long secondId = createCategorizedTask("もう一件", categoryId, "LOW");
+        long otherTaskId = createCategorizedTask("別カテゴリのタスク", otherId, "MEDIUM");
+        mockMvc.perform(put("/api/tasks/{id}", taskId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"保持するタスク\",\"description\":\"説明\",\"done\":true}"))
+                .andExpect(status().isOk());
+        entityManager.flush();
+        entityManager.clear();
+        MvcResult persisted = mockMvc.perform(get("/api/tasks/{id}", taskId))
+                .andExpect(status().isOk()).andReturn();
+        String completedAt = JsonPath.read(persisted.getResponse().getContentAsString(), "$.completedAt");
+        String createdAt = JsonPath.read(persisted.getResponse().getContentAsString(), "$.createdAt");
+        mockMvc.perform(delete("/api/categories/{id}", categoryId))
+                .andExpect(status().isNoContent());
+        entityManager.clear();
+        mockMvc.perform(get("/api/tasks/{id}", taskId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(taskId))
+                .andExpect(jsonPath("$.title").value("保持するタスク"))
+                .andExpect(jsonPath("$.description").value("説明"))
+                .andExpect(jsonPath("$.priority").value("HIGH"))
+                .andExpect(jsonPath("$.done").value(true))
+                .andExpect(jsonPath("$.createdAt").value(createdAt))
+                .andExpect(jsonPath("$.completedAt").value(completedAt))
+                .andExpect(jsonPath("$.categoryId").hasJsonPath())
+                .andExpect(jsonPath("$.categoryId").value((Object) null));
+        mockMvc.perform(get("/api/tasks/{id}", secondId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryId").value((Object) null));
+        mockMvc.perform(get("/api/tasks/{id}", otherTaskId))
+                .andExpect(jsonPath("$.categoryId").value(otherId));
+        mockMvc.perform(get("/api/tasks"))
+                .andExpect(jsonPath("$.length()").value(6));
+        mockMvc.perform(get("/api/tasks").param("categoryId", Long.toString(categoryId)))
+                .andExpect(status().isBadRequest());
+    }
+
+    private long createCategory(String name) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/categories")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"" + name + "\"}"))
+                .andExpect(status().isCreated()).andReturn();
+        Number id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+        return id.longValue();
+    }
+
+    private long createCategorizedTask(String title, long categoryId, String priority) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"" + title + "\",\"categoryId\":" + categoryId
+                        + ",\"priority\":\"" + priority + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.categoryId").value(categoryId)).andReturn();
+        Number id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+        return id.longValue();
+    }
+
+    @Test
     void タスク一覧を取得できる() throws Exception {
         mockMvc.perform(get("/api/tasks"))
                 .andExpect(status().isOk())
