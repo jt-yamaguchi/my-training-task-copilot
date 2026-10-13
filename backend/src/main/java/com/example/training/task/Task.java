@@ -42,6 +42,9 @@ public class Task {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    @Column(name = "completed_at")
+    private OffsetDateTime completedAt;
+
     protected Task() {
         // JPAが使用するデフォルトコンストラクタ
     }
@@ -83,9 +86,14 @@ public class Task {
         return createdAt;
     }
 
-    public void update(String title, String description, boolean done) {
+    public OffsetDateTime getCompletedAt() {
+        return completedAt;
+    }
+
+    public void update(String title, String description, boolean done, OffsetDateTime completedAt) {
         this.title = title;
         this.description = description;
         this.done = done;
+        this.completedAt = completedAt;
     }
 }

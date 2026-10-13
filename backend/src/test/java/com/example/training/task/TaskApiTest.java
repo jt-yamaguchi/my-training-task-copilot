@@ -7,7 +7,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import jakarta.persistence.EntityManager;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -31,6 +36,9 @@ class TaskApiTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     void タスク一覧を取得できる() throws Exception {
@@ -141,13 +149,101 @@ class TaskApiTest {
 
     @Test
     void タスクを作成できる() throws Exception {
-        mockMvc.perform(post("/api/tasks")
+        MvcResult created = mockMvc.perform(post("/api/tasks")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"title\": \"新しいタスク\", \"description\": \"説明\", \"done\": false}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.title").value("新しいタスク"))
-                .andExpect(jsonPath("$.done").value(false));
+                .andExpect(jsonPath("$.done").value(false))
+                .andExpect(jsonPath("$.completedAt").hasJsonPath())
+                .andExpect(jsonPath("$.completedAt").value((Object) null))
+                .andReturn();
+
+        entityManager.flush();
+        entityManager.clear();
+        Number idValue = JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+        mockMvc.perform(get("/api/tasks/{id}", idValue.longValue()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.completedAt").hasJsonPath())
+                .andExpect(jsonPath("$.completedAt").value((Object) null));
+    }
+
+    @Test
+    void 完了日時を記録し取り消すとnullに戻る() throws Exception {
+        MvcResult created = mockMvc.perform(post("/api/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\": \"完了日時の検証\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Number idValue = JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+        long id = idValue.longValue();
+        Instant beforeCompletion = Instant.now();
+        MvcResult completed = mockMvc.perform(put("/api/tasks/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\": \"完了日時の検証\", \"done\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.done").value(true))
+                .andExpect(jsonPath("$.completedAt").isString())
+                .andReturn();
+
+        String completedAt = JsonPath.read(completed.getResponse().getContentAsString(), "$.completedAt");
+        Instant completedInstant = OffsetDateTime.parse(completedAt).toInstant();
+        assertTrue(!completedInstant.isBefore(beforeCompletion) && !completedInstant.isAfter(Instant.now()));
+        entityManager.flush();
+        entityManager.clear();
+        MvcResult fetched = mockMvc.perform(get("/api/tasks/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.completedAt").isString())
+                .andReturn();
+        String persistedAt = JsonPath.read(fetched.getResponse().getContentAsString(), "$.completedAt");
+        Instant persistedInstant = OffsetDateTime.parse(persistedAt).toInstant();
+        assertTrue(Duration.between(completedInstant, persistedInstant).abs().compareTo(Duration.ofMillis(1)) < 0);
+
+        mockMvc.perform(put("/api/tasks/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\": \"タイトル変更\", \"done\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.completedAt").value(persistedAt));
+        mockMvc.perform(put("/api/tasks/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\": \"完了日時の検証\", \"done\": false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.done").value(false))
+                .andExpect(jsonPath("$.completedAt").hasJsonPath())
+                .andExpect(jsonPath("$.completedAt").value((Object) null));
+        entityManager.flush();
+        entityManager.clear();
+        mockMvc.perform(get("/api/tasks/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.completedAt").hasJsonPath())
+                .andExpect(jsonPath("$.completedAt").value((Object) null));
+
+        Instant beforeRecompletion = Instant.now();
+        MvcResult recompleted = mockMvc.perform(put("/api/tasks/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\": \"完了日時の検証\", \"done\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.completedAt").isString())
+                .andReturn();
+        String recompletedAt = JsonPath.read(recompleted.getResponse().getContentAsString(), "$.completedAt");
+        Instant recompletedInstant = OffsetDateTime.parse(recompletedAt).toInstant();
+        assertTrue(!recompletedInstant.isBefore(beforeRecompletion) && !recompletedInstant.isAfter(Instant.now()));
+    }
+
+    @Test
+    void 導入前の完了タスクは更新しても完了日時を補完しない() throws Exception {
+        entityManager.createNativeQuery("UPDATE tasks SET done = true WHERE id = 1").executeUpdate();
+        entityManager.clear();
+
+        mockMvc.perform(put("/api/tasks/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\": \"旧完了タスク\", \"done\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.done").value(true))
+                .andExpect(jsonPath("$.completedAt").hasJsonPath())
+                .andExpect(jsonPath("$.completedAt").value((Object) null));
     }
 
     @Test

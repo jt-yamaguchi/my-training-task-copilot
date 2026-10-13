@@ -6,6 +6,17 @@ const priorityLabels: Record<TaskPriority, string> = {
   LOW: '低',
 };
 
+const completedAtFormatter = new Intl.DateTimeFormat('ja-JP', {
+  timeZone: 'Asia/Tokyo',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+});
+
 type Props = {
   task: Task;
   onToggle: (task: Task) => Promise<void>;
@@ -34,6 +45,14 @@ export default function TaskItem({ task, onToggle, onDelete }: Props) {
         <p className="task-due-date">
           期限: {task.dueDate}
           {overdue && <span className="overdue-badge">期限切れ</span>}
+        </p>
+      )}
+      {task.done && task.completedAt !== null && (
+        <p className="task-completed-at">
+          完了日時:{' '}
+          <time dateTime={task.completedAt}>
+            {completedAtFormatter.format(new Date(task.completedAt))}
+          </time>
         </p>
       )}
       <button type="button" className="task-delete" onClick={() => void onDelete(task.id)}>

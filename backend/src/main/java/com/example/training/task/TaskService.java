@@ -4,6 +4,8 @@ import com.example.training.common.NotFoundException;
 import com.example.training.task.dto.TaskCreateRequest;
 import com.example.training.task.dto.TaskRequest;
 import com.example.training.task.dto.TaskResponse;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,7 +48,11 @@ public class TaskService {
     @Transactional
     public TaskResponse update(Long id, TaskRequest request) {
         Task task = getTask(id);
-        task.update(request.title(), request.description(), request.done());
+        OffsetDateTime completedAt = null;
+        if (request.done()) {
+            completedAt = task.isDone() ? task.getCompletedAt() : OffsetDateTime.now(ZoneOffset.UTC);
+        }
+        task.update(request.title(), request.description(), request.done(), completedAt);
         return TaskResponse.from(task);
     }
 
