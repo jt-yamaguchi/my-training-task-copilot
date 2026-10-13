@@ -15,7 +15,8 @@ public record TaskResponse(
         TaskPriority priority,
         boolean done,
         LocalDate dueDate,
-        OffsetDateTime createdAt) {
+        OffsetDateTime createdAt,
+        OffsetDateTime completedAt) {
 
     public static TaskResponse from(Task task) {
         return new TaskResponse(
@@ -25,6 +26,7 @@ public record TaskResponse(
                 task.getPriority(),
                 task.isDone(),
                 task.getDueDate(),
-                task.getCreatedAt());
+                task.getCreatedAt(),
+                task.getCompletedAt());
     }
 }

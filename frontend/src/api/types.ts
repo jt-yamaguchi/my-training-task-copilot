@@ -12,6 +12,7 @@ export type Task = {
   done: boolean;
   dueDate: string | null;
   createdAt: string;
+  completedAt: string | null;
 };
 
 export type TaskCreateRequest = {

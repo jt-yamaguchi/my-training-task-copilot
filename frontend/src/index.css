@@ -189,10 +189,15 @@ body {
   font-size: 0.88rem;
 }
 
-.task-due-date {
+.task-due-date,
+.task-completed-at {
   margin: 6px 0 0 26px;
   color: var(--ink-soft);
   font-size: 0.88rem;
+}
+
+.task-completed-at {
+  overflow-wrap: anywhere;
 }
 
 .overdue-badge {

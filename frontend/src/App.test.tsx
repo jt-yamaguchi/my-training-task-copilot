@@ -16,6 +16,7 @@ const seedTasks: Task[] = [
     done: true,
     dueDate: null,
     createdAt: '2026-01-01T00:00:00+09:00',
+    completedAt: null,
   },
   {
     id: 2,
@@ -25,6 +26,7 @@ const seedTasks: Task[] = [
     done: false,
     dueDate: null,
     createdAt: '2026-01-01T00:00:00+09:00',
+    completedAt: null,
   },
 ];
 
@@ -65,6 +67,7 @@ describe('App', () => {
       done: false,
       dueDate: '2026-10-15',
       createdAt: '2026-01-02T00:00:00+09:00',
+      completedAt: null,
     };
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
@@ -114,6 +117,76 @@ describe('App', () => {
     });
   });
 
+  it('完了タスクの行に日本時間の完了日時が表示される', async () => {
+    const completed: Task = {
+      ...seedTasks[0],
+      completedAt: '2026-10-12T15:30:45Z',
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse([completed]));
+
+    render(<App />);
+
+    const completedAt = await screen.findByText('2026/10/13 00:30:45');
+    expect(completedAt).toHaveAttribute('datetime', completed.completedAt);
+    expect(completedAt.closest('li')).toHaveTextContent('環境構築を完了する');
+    expect(completedAt.closest('li')).toHaveTextContent('完了日時: 2026/10/13 00:30:45');
+  });
+
+  it.each([
+    { done: true, completedAt: null },
+    { done: false, completedAt: null },
+    { done: false, completedAt: '2026-10-12T15:30:45Z' },
+  ])('未完了または日時なしでは完了日時を表示しない: %j', (state) => {
+    render(
+      <TaskItem
+        task={{ ...seedTasks[0], ...state }}
+        onToggle={vi.fn(async () => {})}
+        onDelete={vi.fn(async () => {})}
+      />,
+    );
+
+    expect(screen.queryByText(/完了日時:/)).not.toBeInTheDocument();
+  });
+
+  it('完了すると日時が表示され、取り消すと表示が消える', async () => {
+    const task = seedTasks[1];
+    const completed: Task = { ...task, done: true, completedAt: '2026-10-12T15:30:45Z' };
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse([task]))
+      .mockResolvedValueOnce(jsonResponse(completed))
+      .mockResolvedValueOnce(jsonResponse([completed]))
+      .mockResolvedValueOnce(jsonResponse(task))
+      .mockResolvedValueOnce(jsonResponse([task]));
+
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText(task.title);
+    expect(screen.queryByText(/完了日時:/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox'));
+    expect(await screen.findByText('2026/10/13 00:30:45')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/tasks/2',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ title: task.title, description: task.description, done: true }),
+      }),
+    );
+
+    await user.click(screen.getByRole('checkbox'));
+    await waitFor(() => {
+      expect(screen.queryByText(/完了日時:/)).not.toBeInTheDocument();
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/tasks/2',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ title: task.title, description: task.description, done: false }),
+      }),
+    );
+  });
+
   it('API失敗時にエラーメッセージが表示される', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       jsonResponse({ message: 'サーバーエラー' }, 500),
@@ -136,6 +209,7 @@ describe('App', () => {
         done: false,
         dueDate: '2026-10-01',
         createdAt: '2026-01-01T00:00:00+09:00',
+        completedAt: null,
       },
       {
         id: 11,
@@ -145,6 +219,7 @@ describe('App', () => {
         done: false,
         dueDate: '2026-10-02',
         createdAt: '2026-01-01T00:00:00+09:00',
+        completedAt: null,
       },
       {
         id: 12,
@@ -154,6 +229,7 @@ describe('App', () => {
         done: false,
         dueDate: '2026-10-03',
         createdAt: '2026-01-01T00:00:00+09:00',
+        completedAt: null,
       },
       {
         id: 13,
@@ -163,6 +239,7 @@ describe('App', () => {
         done: true,
         dueDate: '2026-10-01',
         createdAt: '2026-01-01T00:00:00+09:00',
+        completedAt: null,
       },
     ];
     const onToggle = vi.fn(async () => {});
